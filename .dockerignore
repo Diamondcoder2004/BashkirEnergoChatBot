@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+
+documents/
+output_md/
+vector_db/
+qdrant_storage/
+
+.env
+.env.local
+
+.git
+.idea
+.vscode

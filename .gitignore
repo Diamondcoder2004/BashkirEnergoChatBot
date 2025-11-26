@@ -1,0 +1,22 @@
+# Виртуальное окружение
+.venv/
+venv/
+
+# Кэши Python
+__pycache__/
+*.pyc
+
+# Результаты обработки — НЕ коммитим никогда!
+output_md/
+output_without_OCR/
+vector_db/
+documents/
+qdrant_storage/
+
+# .env с токенами
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/

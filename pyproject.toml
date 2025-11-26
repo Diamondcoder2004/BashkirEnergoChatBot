@@ -1,0 +1,30 @@
+[project]
+name = "bashkir-rag"
+version = "0.1.0"
+description = "RAG по документам Башкирэнерго | RTX 3060"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    # На Windows будет CPU-версия, в Docker — CUDA (переопределим ниже)
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+    "torchaudio==2.5.1",
+
+    "langchain==0.3.20",
+    "langchain-community==0.3.19",
+    "langchain-core==0.3.41",
+    "langchain-ollama==0.2.2",
+    "langchain-huggingface==0.1.0",
+
+    "sentence-transformers==3.1.1",
+    "qdrant-client==1.12.0",
+
+    "pymupdf==1.24.10",
+    "unstructured[all-docs]==0.15.12",
+    "pillow==10.4.0",
+    "python-dotenv>=1.0.1",
+    "pyyaml>=6.0.2",
+]
+
+# ← УБИРАЕМ ВСЁ tool.uv.sources — они ломают Windows
+# На хосте будет обычный torch из PyPI (CPU)
+# В Docker мы поставим CUDA-версию через index-url
