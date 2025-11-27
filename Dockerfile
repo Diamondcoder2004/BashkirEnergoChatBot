@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# 2. Копируем pyproject.toml
-COPY pyproject.toml .
+# 2. Копируем pyproject.toml и uv.lock
+COPY pyproject.toml uv.lock ./
 
 # 3. Устанавливаем uv и зависимости в одном RUN
 RUN pip install uv && \

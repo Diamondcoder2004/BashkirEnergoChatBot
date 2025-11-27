@@ -1,4 +1,4 @@
-# main.py — PDF → Markdown с OCR
+# main.py — PDF → Markdown с OCR и семантическим чанкингом через deepseek-r1
 import os
 import re
 import json
@@ -204,7 +204,7 @@ processed_at: {datetime.now().isoformat().split('.')[0]}
 ---
 
 """
-    
+
     # Сохраняем результат
     output_path = OUTPUT_DIR / f"{pdf_path.stem}.md"
     try:

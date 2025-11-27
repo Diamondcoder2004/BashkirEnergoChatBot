@@ -1,22 +1,42 @@
-# Виртуальное окружение
+```
+# Dependencies
 .venv/
 venv/
-
-# Кэши Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Результаты обработки — НЕ коммитим никогда!
-output_md/
-output_without_OCR/
-vector_db/
-documents/
-qdrant_storage/
+# Build artifacts
+dist/
+build/
+*.egg-info/
 
-# .env с токенами
+# Logs
+*.log
+
+# Environment
 .env
 .env.local
+*.env.*
 
-# IDE
-.idea/
+# Editors
 .vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+```
