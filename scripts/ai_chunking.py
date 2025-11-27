@@ -1,4 +1,4 @@
-# ai_chunking.py — окончательная версия с frida-bert через .env
+# ai_chunking.py — создание векторной базы в Qdrant из semantic chunks с помощью deepseek-r1 и nomic эмбеддингов
 from langchain_ollama import OllamaLLM
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Qdrant
@@ -10,17 +10,25 @@ llm = OllamaLLM(model="deepseek-r1:8b",
                 base_url="http://host.docker.internal:11434",
                 temperature=0.1)
 
-# Твой приватный rubert-mini-frida (токен берётся из .env → HUGGINGFACE_HUB_TOKEN)
+# Nomic эмбеддинги (работают с русским языком и другими)
 embeddings = HuggingFaceEmbeddings(
-    model_name="ognivo777/rubert-mini-frida",
-    model_kwargs={"device": "cuda"}
+    model_name="nomic-ai/nomic-embed-text-v1.5",
+    model_kwargs={"device": "cuda"},
+    encode_kwargs={"normalize_embeddings": True}
 )
 
-print("DeepSeek-R1-8b + rubert-mini-frida — всё подключено!")
+print("DeepSeek-R1-8b + nomic-embed-text-v1.5 — всё подключено!")
 
 def load_and_chunk():
-    path = pathlib.Path("/app/output")
+    # Используем semantic chunks вместо простого разбиения
+    path = pathlib.Path("/app/semantic_chunks")
     docs = []
+    
+    # Если semantic_chunks не существует, используем оригинальные markdown файлы
+    if not path.exists():
+        print("⚠️ Директория semantic_chunks не найдена, используем /app/output")
+        path = pathlib.Path("/app/output")
+    
     for md in path.glob("*.md"):
         text = md.read_text(encoding="utf-8")
         m = re.match(r'^---\s*\n(.*?)\n---\s*\n', text, re.DOTALL)
@@ -28,27 +36,27 @@ def load_and_chunk():
         text = text[m.end():] if m else text
         text = re.sub(r'## Страница \d+\s*\n+', '', text)
         text = re.sub(r'\n{3,}', '\n\n', text.strip())
-
-        chunks = [c.strip() for c in text.split("\n\n") if len(c.strip()) > 100]
-        for i, c in enumerate(chunks):
-            docs.append(Document(
-                page_content=c,
-                metadata={**meta, "source": md.name, "chunk_id": i}
-            ))
+        
+        # Для семантических чанков берем каждый файл как отдельный документ
+        docs.append(Document(
+            page_content=text,
+            metadata={**meta, "source": md.name}
+        ))
+    
     return docs
 
 print("Загружаем документы...")
 documents = load_and_chunk()
 print(f"Создано {len(documents)} чанков")
 
-print("Заливаем в Qdrant (frida-bert)...")
+print("Заливаем в Qdrant (nomic-embed-text-v1.5)...")
 Qdrant.from_documents(
     documents,
     embeddings,
     location="http://localhost:6333",
-    collection_name="bashkir_energo_docs_frida",
+    collection_name="bashkir_energo_docs_nomic",
     force_recreate=True
 )
 
-print("\nГОТОВО! Коллекция: bashkir_energo_docs_frida")
+print("\nГОТОВО! Коллекция: bashkir_energo_docs_nomic")
 print("Открывай http://localhost:6333/dashboard — будет самая точная кластеризация юр.текста в РФ")

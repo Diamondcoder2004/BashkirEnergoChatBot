@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-""}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:6333/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  semantic_chunker:
+    build: .
+    container_name: semantic_chunker
+    volumes:
+      - ./documents:/app/documents
+      - ./output:/app/output
+      - ./semantic_chunks:/app/semantic_chunks
+      - ./.env:/app/.env:ro
+    environment:
+      - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN:-""}
+      - OLLAMA_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["uv", "run", "scripts/semantic_chunking.py"]
+    restart: "no"
+    depends_on:
+      - qdrant
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  rag_processor:
+    build: .
+    container_name: rag_processor
+    depends_on:
+      - qdrant
+      - semantic_chunker
+    volumes:
+      - ./documents:/app/documents
+      - ./output:/app/output
+      - ./semantic_chunks:/app/semantic_chunks
+      - ./.env:/app/.env:ro
+    environment:
+      - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN:-""}
+      - OLLAMA_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: "no"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  qdrant_data:
