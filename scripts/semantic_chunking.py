@@ -1,69 +1,29 @@
 """
-Семантический чанкинг документов с использованием deepseek-r1
+Семантический чанкинг документов с использованием OllamaEmbeddings и SemanticChunker
 """
 import os
 import re
-import json
 import yaml
 from pathlib import Path
-from typing import List, Dict, Any
-from langchain_ollama import OllamaLLM
-from langchain_core.prompts import PromptTemplate
+from langchain_community.llms import Ollama
+from langchain_community.embeddings import OllamaEmbeddings
+from langchain_experimental.text_splitter import SemanticChunker
 
-# Инициализация LLM
-llm = OllamaLLM(
-    model="deepseek-r1:8b",
-    base_url="http://host.docker.internal:11434",
-    temperature=0.1
-)
-
-# Шаблон промпта для семантического чанкинга
-semantic_chunking_prompt = PromptTemplate(
-    input_variables=["text", "chunk_size"],
-    template="""
-    Ты — эксперт по анализу юридических и деловых документов. Раздели следующий текст на логически связанные семантические блоки (чанки).
-    Каждый чанк должен содержать полную мысль или связанную группу мыслей, не превышающую {chunk_size} токенов.
-    ВАЖНО: 
-    - Сохраняй контекст и логическую целостность каждого чанка
-    - Не разбивай текст посередине предложений
-    - Учитывай структуру документа (разделы, подразделы, статьи)
-    - Предпочтительно разбивай на чанки в местах естественных пауз
-    
-    Текст для разбиения:
-    {text}
-    
-    Верни результат в формате JSON массива строк, где каждая строка — это отдельный семантический чанк:
-    [ "чанк1", "чанк2", ... ]
-    """
-)
+# Инициализация эмбеддингов для чанкинга
+ollama_host = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
+chunker_embeddings = OllamaEmbeddings(model="ognivo777/rubert-mini-frida:latest", base_url=ollama_host)
 
 def semantic_chunk_text(text: str, chunk_size: int = 512) -> List[str]:
     """
-    Семантически разбивает текст на чанки с помощью deepseek-r1
+    Семантически разбивает текст на чанки с помощью SemanticChunker
     """
-    # Если текст короче размера чанка, возвращаем как есть
-    if len(text) < chunk_size * 3:  # грубая оценка
-        return [text]
+    # Создаем экземпляр SemanticChunker с заданными эмбеддингами
+    chunker = SemanticChunker(chunker_embeddings, breakpoint_threshold_type="interquartile")
     
-    # Вызов LLM для семантического разбиения
-    chain = semantic_chunking_prompt | llm
-    response = chain.invoke({"text": text, "chunk_size": chunk_size})
+    # Разбиваем текст на чанки
+    chunks = chunker.split_text(text)
     
-    try:
-        # Пытаемся распарсить JSON из ответа
-        # Убираем возможные маркеры кода
-        clean_response = re.sub(r'```json\s*|\s*```', '', response, flags=re.DOTALL)
-        chunks = json.loads(clean_response.strip())
-        
-        if isinstance(chunks, list):
-            return [chunk for chunk in chunks if chunk.strip()]
-        else:
-            # Если ответ не в формате массива, возвращаем как один чанк
-            return [text]
-    except json.JSONDecodeError:
-        # Если не удалось распарсить JSON, возвращаем простое разбиение
-        print("⚠️ Не удалось распарсить JSON, используем простое разбиение")
-        return simple_chunk_text(text, chunk_size)
+    return chunks
 
 def simple_chunk_text(text: str, chunk_size: int = 512) -> List[str]:
     """
@@ -116,8 +76,14 @@ def process_markdown_files(input_dir: Path, output_dir: Path, chunk_size: int = 
             text_content = content
             metadata = {}
         
-        # Разбиваем текст на семантические чанки
-        chunks = semantic_chunk_text(text_content, chunk_size)
+        # Очистка текста перед чанкингом (как в пользовательском коде)
+        clean_text = re.sub(r'## Страница \d+', '', text_content)
+        clean_text = re.sub(r'!\[.*?\]\(.*?\)', '', clean_text)
+        clean_text = re.sub(r'\[[^\]]*\]\(.*?\)', '', clean_text)
+        clean_text = re.sub(r'\n{3,}', '\n\n', clean_text.strip())
+        
+        # Разбиваем очищенный текст на семантические чанки
+        chunks = semantic_chunk_text(clean_text, chunk_size)
         
         print(f"  Создано {len(chunks)} чанков")
         

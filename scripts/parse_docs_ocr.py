@@ -51,7 +51,13 @@ def generate_tags(text_sample: str) -> list:
 
 def generate_summary(text: str, max_sentences=3) -> str:
     """Быстрое извлечение аннотации"""
-    sentences = re.split(r'[.!?]+', text)
+    # Remove markdown headers before generating summary
+    clean_text = re.sub(r'## Страница \d+', '', text)
+    clean_text = re.sub(r'!\[.*?\]\(.*?\)', '', clean_text)
+    clean_text = re.sub(r'\[[^\]]*\]\(.*?\)', '', clean_text)
+    clean_text = re.sub(r'\n{3,}', '\n\n', clean_text.strip())
+    
+    sentences = re.split(r'[.!?]+', clean_text)
     summary = ". ".join([s.strip() for s in sentences if len(s.strip()) > 10][:max_sentences])
     return (summary + ".").strip() if summary else "Аннотация недоступна."
 
