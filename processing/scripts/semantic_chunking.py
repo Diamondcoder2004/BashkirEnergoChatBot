@@ -1,19 +1,18 @@
 """
-Семантический чанкинг документов с использованием OllamaEmbeddings и SemanticChunker
+Семантический чанкинг документов с использованием HuggingFaceEmbeddings и SemanticChunker
 """
 import os
 import re
 import yaml
 from pathlib import Path
-from langchain_ollama import OllamaEmbeddings  # ИСПРАВЬ ИМПОРТ!
+from langchain_huggingface import HuggingFaceEmbeddings  # ИСПРАВЬ ИМПОРТ!
 from langchain_experimental.text_splitter import SemanticChunker
 from typing import List
 
 # Инициализация эмбеддингов для чанкинга
-ollama_host = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
-chunker_embeddings = OllamaEmbeddings(
-    model="ognivo777/rubert-mini-frida:latest",  # ИСПРАВЬ: model вместо model_name
-    base_url=ollama_host
+chunker_embeddings = HuggingFaceEmbeddings(
+    model_name="MiniLM-L12-v2",  
+    encode_kwargs={"normalize_embeddings": True}
 )
 # Остальной код без изменений...
 def semantic_chunk_text(text: str, chunk_size: int = 512) -> List[str]:

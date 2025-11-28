@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from langchain_ollama import OllamaLLM, OllamaEmbeddings
+from langchain_ollama import OllamaLLM
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Qdrant
 from qdrant_client import QdrantClient
 import uvicorn
@@ -46,6 +47,19 @@ llm = None
 vector_store = None
 SERVICE_READY = False
 
+
+def compress(text: str) -> str:
+    """
+    Compresses text to 20% of its original volume while preserving key facts.
+    
+    Args:
+        text: Input text to compress
+        
+    Returns:
+        Compressed text
+    """
+    return llm.invoke(f"Сожми текст до 20% объёма, сохрани ключевые факты:\n\n{text}")
+
 @app.on_event("startup")
 async def startup_event():
     global llm, vector_store, SERVICE_READY
@@ -59,17 +73,17 @@ async def startup_event():
         
         # Инициализация LLM
         llm = OllamaLLM(
-            model="deepseek-r1:8b",
+            model="bambucha/saiga-llama3",
             base_url=OLLAMA_HOST,
             temperature=0.1,
             num_ctx=8192,
             timeout=120
         )
         
-        # Инициализация русскоязычных эмбеддингов
-        embeddings = OllamaEmbeddings(
-            model="ognivo777/rubert-mini-frida:latest",
-            base_url=OLLAMA_HOST
+        # Инициализация русскоязычных эмбеддингов с использованием HuggingFace
+        embeddings = HuggingFaceEmbeddings(
+            model_name="MiniLM-L12-v2",  
+            encode_kwargs={"normalize_embeddings": True}
         )
         
         # Инициализация Qdrant
@@ -167,11 +181,15 @@ async def ask_question(request: QuestionRequest):
         
         logger.info(f"📄 Контекст подготовлен ({len(context)} символов)")
         
-        # Промпт для DeepSeek
+        # Сжимаем контекст перед подачей в LLM
+        compressed_context = compress(context)
+        logger.info(f"📦 Контекст сжат до ({len(compressed_context)} символов)")
+        
+        # Промпт для Saiga-llama3
         prompt = f"""Ты - AI-ассистент по документам Башкирэнерго. Проанализируй контекст и ответь на вопрос.
 
 КОНТЕКСТ (документы Башкирэнерго):
-{context}
+{compressed_context}
 
 ВОПРОС:
 {request.question}
@@ -189,7 +207,7 @@ async def ask_question(request: QuestionRequest):
 ОТВЕТ:"""
         
         # Генерация ответа
-        logger.info("🤖 Генерация ответа с DeepSeek...")
+        logger.info("🤖 Генерация ответа с Saiga-llama3...")
         answer = llm.invoke(prompt)
         logger.info(f"✅ Ответ сгенерирован")
         
