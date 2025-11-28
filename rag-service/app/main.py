@@ -9,6 +9,9 @@ import logging
 from typing import List, Optional
 import os
 
+# Import reranker functions
+from reranker import get_relevant_docs, get_relevant_chunks
+
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -157,27 +160,29 @@ async def ask_question(request: QuestionRequest):
         logger.info(f"📥 Вопрос: {request.question}")
         logger.info(f"📁 Поиск в коллекции: {COLLECTION_NAME}")
         
-        # Поиск релевантных документов
-        retriever = vector_store.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": request.top_k}
-        )
+        # Получаем релевантные чанки с помощью reranker
+        # Сначала получаем больше документов для reranking
+        initial_docs = get_relevant_chunks(request.question, vector_store)
+        logger.info(f"🔍 Найдено начальных документов: {len(initial_docs)}")
         
-        docs = retriever.invoke(request.question)
-        logger.info(f"🔍 Найдено документов: {len(docs)}")
-        
-        if not docs:
+        if not initial_docs:
             return AnswerResponse(
                 question=request.question,
                 answer=f"В коллекции '{COLLECTION_NAME}' нет информации по этому вопросу",
                 sources=[]
             )
         
-        # Формируем контекст
-        context = "\n\n".join([
-            f"[Документ: {doc.metadata.get('source', 'Unknown')}]\n{doc.page_content}"
-            for doc in docs
-        ])
+        # Используем reranker для переупорядочивания документов
+        threshold = 0.1  # Порог релевантности
+        relevant_docs = get_relevant_docs(request.question, initial_docs, threshold)
+        logger.info(f"✅ Отранжировано релевантных документов: {len(relevant_docs)}")
+        
+        # Ограничиваем количество документов до top_k
+        relevant_docs = relevant_docs[:request.top_k]
+        
+        # Формируем контекст из переупорядоченных документов
+        # Since we don't have metadata in the reranked docs, we'll use the content directly
+        context = "\n\n".join(relevant_docs)
         
         logger.info(f"📄 Контекст подготовлен ({len(context)} символов)")
         
@@ -211,12 +216,12 @@ async def ask_question(request: QuestionRequest):
         answer = llm.invoke(prompt)
         logger.info(f"✅ Ответ сгенерирован")
         
-        # Формируем источники
+        # Формируем источники из reranked документов
         sources = []
-        for doc in docs:
+        for doc_content in relevant_docs:
             sources.append(DocumentResponse(
-                content=doc.page_content[:500] + "..." if len(doc.page_content) > 500 else doc.page_content,
-                source=doc.metadata.get('source', 'Unknown')
+                content=doc_content[:500] + "..." if len(doc_content) > 500 else doc_content,
+                source="Relevant chunk"  # We don't have specific source metadata from reranker
             ))
         
         return AnswerResponse(
