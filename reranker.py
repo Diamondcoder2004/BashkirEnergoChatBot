@@ -1,30 +1,61 @@
-import requests
+from langchain_community.llms import Ollama
+from app.config import OLLAMA_HOST
 from typing import List, Dict, Optional
 
-def rerank_docs(query: str, documents: List[str], key: str) -> Dict:
+def rerank_docs(query: str, documents: List[str]) -> Dict:
     """
-    Re-ranks documents based on relevance to the query using a remote API.
+    Re-ranks documents based on relevance to the query using a local reranker model.
     
     Args:
         query: The search query
         documents: List of document texts to re-rank
-        key: API key for authorization
         
     Returns:
-        Response from the re-ranking API
+        Dictionary with results containing relevance scores
     """
-    url = "https://ai-for-finance-hack.up.railway.app/rerank"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {key}"
-    }
-    payload = {
-        "model": "deepinfra/Qwen/Qwen3-Reranker-4B",
-        "query": query,
-        "documents": documents  # List of strings
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    return response.json()
+    # Initialize Ollama LLM with the Qwen3-Reranker-0.6B model
+    llm = Ollama(
+        model="dengcao/Qwen3-Reranker-0.6B:latest",
+        base_url=OLLAMA_HOST,
+        temperature=0  # For consistent reranking
+    )
+    
+    # Create reranking results
+    reranked_results = []
+    for idx, doc in enumerate(documents):
+        # Create a prompt that asks the model to score the relevance
+        prompt = f"""Оцените релевантность документа к запросу. 
+        Присвойте оценку от 0 до 1, где 1 - максимально релевантно.
+        
+        Запрос: {query}
+        
+        Документ: {doc}
+        
+        Оценка релевантности (число от 0 до 1):"""
+        
+        try:
+            response = llm.invoke(prompt)
+            # Extract score from response (assuming it returns a number)
+            response_text = response.strip()
+            # Try to extract a float number from the response
+            score = 0.0
+            for word in response_text.split():
+                word_clean = word.replace(',', '.').strip('.,;:')
+                if word_clean.replace('.', '').isdigit():
+                    score = float(word_clean)
+                    break
+        except:
+            score = 0.0  # Default score if parsing fails
+        
+        # Ensure score is between 0 and 1
+        score = max(0.0, min(1.0, score))
+        
+        reranked_results.append({
+            'index': idx,
+            'relevance_score': score
+        })
+    
+    return {'results': reranked_results}
 
 
 def get_relevant_docs(query: str, documents: List[str], threshold: float) -> List[str]:

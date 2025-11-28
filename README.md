@@ -2,16 +2,16 @@
 
 ## Описание
 
-Проект для создания RAG (Retrieval-Augmented Generation) системы для обработки документов Башкирэнерго. Использует Saiga-llama3 в качестве LLM и MiniLM-L12-v2 эмбеддинги для векторизации текста. Включает семантический чанкинг и контекстное сжатие для более точного разбиения и обработки документов.
+Проект для создания RAG (Retrieval-Augmented Generation) системы для обработки документов Башкирэнерго. Использует Saiga-llama3 в качестве LLM, MiniLM-L12-v2 эмбеддинги для векторизации текста и Qwen3-Reranker-0.6B для переупорядочивания документов. Включает семантический чанкинг и контекстное сжатие для более точного разбиения и обработки документов.
 
 ## Архитектура
 
 - **Saiga-llama3**: для генерации ответов и контекстного сжатия
 - **MiniLM-L12-v2**: для создания векторных эмбеддингов
+- **Qwen3-Reranker-0.6B**: для переупорядочивания документов по релевантности
 - **Qdrant**: для хранения векторной базы данных
 - **Langchain**: для построения RAG-конвейера
 - **OCR**: для обработки сканированных документов
-- **Re-ranking**: с использованием Qwen3-Reranker-4B для улучшения релевантности
 
 ## Запуск
 
@@ -20,17 +20,17 @@
 1. Убедитесь, что у вас установлены:
    - Docker и Docker Compose
    - NVIDIA Docker runtime (для GPU-ускорения)
-   - Ollama с моделью `bambucha/saiga-llama3`
+   - Ollama с моделями `bambucha/saiga-llama3` и `dengcao/Qwen3-Reranker-0.6B:latest`
 
-2. Установите модель Ollama:
+2. Установите модели Ollama:
    ```bash
    ollama pull bambucha/saiga-llama3
+   ollama pull dengcao/Qwen3-Reranker-0.6B:latest
    ```
 
 3. Создайте файл `.env` с токеном Hugging Face:
    ```env
    HUGGINGFACE_HUB_TOKEN=your_huggingface_token_here
-   EMBEDDER_API_KEY=your_embedder_api_key_here
    ```
 
 4. Положите PDF-документы в папку `documents/`
