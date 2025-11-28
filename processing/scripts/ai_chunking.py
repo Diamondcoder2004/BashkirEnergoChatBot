@@ -1,23 +1,18 @@
-# ai_chunking.py — создание векторной базы в Qdrant из semantic chunks с помощью deepseek-r1 и nomic эмбеддингов
+# ai_chunking.py — создание векторной базы в Qdrant из semantic chunks с помощью saiga-llama3 и huggingface эмбеддингов
 # from langchain_ollama import OllamaLLM
-from langchain_ollama import OllamaEmbeddings  # ПРАВИЛЬНЫЙ импорт
+from langchain_huggingface import HuggingFaceEmbeddings  # ПРАВИЛЬНЫЙ импорт
 from langchain_community.vectorstores import Qdrant
 from langchain_core.documents import Document
 import pathlib, re, yaml
 import os
-# # DeepSeek-R1-8b (на хосте)
-# llm = OllamaLLM(model="deepseek-r1:8b",
-#                 base_url="http://host.docker.internal:11434",
-#                 temperature=0.1)
 
-# Nomic эмбеддинги (работают с русским языком и другими)
-ollama_host = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
-embeddings = OllamaEmbeddings(
-    model="nomic-embed-text:latest", base_url=ollama_host
-
+# HuggingFace эмбеддинги (работают с русским языком и другими)
+embeddings = HuggingFaceEmbeddings(
+    model_name="MiniLM-L12-v2",  
+    encode_kwargs={"normalize_embeddings": True}
 )
 
-print("nomic-embed-text:latest подключено")
+print("MiniLM-L12-v2 подключено")
 
 def load_and_chunk():
     # Используем semantic chunks вместо простого разбиения
