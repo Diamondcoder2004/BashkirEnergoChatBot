@@ -1,10 +1,12 @@
-from langchain_community.llms import Ollama
-from app.config import OLLAMA_HOST
-from typing import List, Dict, Optional
+from langchain_community.cross_encoders import CrossEncoder
+from typing import List, Dict
+
+# Initialize Russian BERT-based reranker
+reranker = CrossEncoder("DeepPavlov/rubert-base-cased-ranker")
 
 def rerank_docs(query: str, documents: List[str]) -> Dict:
     """
-    Re-ranks documents based on relevance to the query using a local reranker model.
+    Re-ranks documents based on relevance to the query using a Russian BERT-based reranker.
     
     Args:
         query: The search query
@@ -13,46 +15,19 @@ def rerank_docs(query: str, documents: List[str]) -> Dict:
     Returns:
         Dictionary with results containing relevance scores
     """
-    # Initialize Ollama LLM with the Qwen3-Reranker-0.6B model
-    llm = Ollama(
-        model="dengcao/Qwen3-Reranker-0.6B:latest",
-        base_url=OLLAMA_HOST,
-        temperature=0  # For consistent reranking
-    )
+    # Use the cross-encoder to score query-document pairs
+    scores = reranker.predict([(query, doc) for doc in documents])
     
     # Create reranking results
     reranked_results = []
-    for idx, doc in enumerate(documents):
-        # Create a prompt that asks the model to score the relevance
-        prompt = f"""Оцените релевантность документа к запросу. 
-        Присвойте оценку от 0 до 1, где 1 - максимально релевантно.
-        
-        Запрос: {query}
-        
-        Документ: {doc}
-        
-        Оценка релевантности (число от 0 до 1):"""
-        
-        try:
-            response = llm.invoke(prompt)
-            # Extract score from response (assuming it returns a number)
-            response_text = response.strip()
-            # Try to extract a float number from the response
-            score = 0.0
-            for word in response_text.split():
-                word_clean = word.replace(',', '.').strip('.,;:')
-                if word_clean.replace('.', '').isdigit():
-                    score = float(word_clean)
-                    break
-        except:
-            score = 0.0  # Default score if parsing fails
-        
-        # Ensure score is between 0 and 1
-        score = max(0.0, min(1.0, score))
+    for idx, score in enumerate(scores):
+        # Convert to float and ensure score is between 0 and 1
+        score_float = float(score)
+        score_float = max(0.0, min(1.0, score_float))
         
         reranked_results.append({
             'index': idx,
-            'relevance_score': score
+            'relevance_score': score_float
         })
     
     return {'results': reranked_results}

@@ -83,9 +83,9 @@ async def startup_event():
             timeout=120
         )
         
-        # Инициализация русскоязычных эмбеддингов с использованием HuggingFace
+        # Инициализация русскоязычных эмбеддингов с использованием HuggingFace (русский SBERT)
         embeddings = HuggingFaceEmbeddings(
-            model_name="MiniLM-L12-v2",  
+            model_name="ai-forever/sbert_ru_base",  
             encode_kwargs={"normalize_embeddings": True}
         )
         
