@@ -9,9 +9,9 @@ from langchain_huggingface import HuggingFaceEmbeddings  # ИСПРАВЬ ИМП
 from langchain_experimental.text_splitter import SemanticChunker
 from typing import List
 
-# Инициализация эмбеддингов для чанкинга
+# Инициализация эмбеддингов для чанкинга (русский SBERT)
 chunker_embeddings = HuggingFaceEmbeddings(
-    model_name="MiniLM-L12-v2",  
+    model_name="ai-forever/sbert_ru_base",  
     encode_kwargs={"normalize_embeddings": True}
 )
 # Остальной код без изменений...
@@ -25,7 +25,58 @@ def semantic_chunk_text(text: str, chunk_size: int = 512) -> List[str]:
     # Разбиваем текст на чанки
     chunks = chunker.split_text(text)
     
-    return chunks
+    # Применяем обработку для добавления оверлэпа и проверки минимального размера
+    processed_chunks = []
+    for i, chunk in enumerate(chunks):
+        # Очистка чанка от лишних символов
+        clean_chunk = re.sub(r'\n{3,}', '\n\n', chunk.strip())
+        clean_chunk = re.sub(r'^\s+|\s+$', '', clean_chunk, flags=re.MULTILINE)
+        
+        # Если чанк меньше минимального размера (256 символов), объединяем с предыдущим или следующим
+        if len(clean_chunk) < 256:
+            if i > 0 and len(processed_chunks) > 0:
+                # Объединяем с предыдущим чанком
+                processed_chunks[-1] = processed_chunks[-1] + " " + clean_chunk
+            elif i < len(chunks) - 1:
+                # Объединяем со следующим чанком
+                continue  # Пропускаем текущий и объединим со следующим
+        else:
+            processed_chunks.append(clean_chunk)
+    
+    # Добавляем оверлэп 20% между чанками
+    if len(processed_chunks) > 1:
+        overlap_chunks = []
+        for i, chunk in enumerate(processed_chunks):
+            if i > 0:
+                # Рассчитываем 20% оверлэп от текущего чанка
+                overlap_size = int(len(chunk) * 0.2)
+                if overlap_size > 0:
+                    # Берем начало текущего чанка для оверлэпа с предыдущим
+                    overlap_text = chunk[:overlap_size]
+                    # Добавляем оверлэп к предыдущему чанку
+                    processed_chunks[i-1] = processed_chunks[i-1] + " ... " + overlap_text
+            overlap_chunks.append(chunk)
+        processed_chunks = overlap_chunks
+    
+    # Повторная проверка минимального размера после добавления оверлэпа
+    final_chunks = []
+    for chunk in processed_chunks:
+        # Окончательная очистка чанка от лишних символов
+        clean_chunk = re.sub(r'\n{3,}', '\n\n', chunk.strip())
+        clean_chunk = re.sub(r'^\s+|\s+$', '', clean_chunk, flags=re.MULTILINE)
+        
+        # Проверяем минимальный размер
+        if len(clean_chunk) >= 256:
+            final_chunks.append(clean_chunk)
+        else:
+            # Если чанк слишком маленький, объединяем с предыдущим
+            if final_chunks:
+                final_chunks[-1] = final_chunks[-1] + "\n\n" + clean_chunk
+            else:
+                # Если это первый чанк и он слишком мал, просто добавляем
+                final_chunks.append(clean_chunk)
+    
+    return final_chunks
 
 def process_markdown_files(input_dir: Path, output_dir: Path, chunk_size: int = 512):
     """

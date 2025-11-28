@@ -6,13 +6,13 @@ from langchain_core.documents import Document
 import pathlib, re, yaml
 import os
 
-# HuggingFace эмбеддинги (работают с русским языком и другими)
+# HuggingFace эмбеддинги (работают с русским языком и другими) - используем русский SBERT
 embeddings = HuggingFaceEmbeddings(
-    model_name="MiniLM-L12-v2",  
+    model_name="ai-forever/sbert_ru_base",  
     encode_kwargs={"normalize_embeddings": True}
 )
 
-print("MiniLM-L12-v2 подключено")
+print("ai-forever/sbert_ru_base подключено")
 
 def load_and_chunk():
     # Используем semantic chunks вместо простого разбиения
