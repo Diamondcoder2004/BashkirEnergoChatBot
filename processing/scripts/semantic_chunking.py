@@ -5,14 +5,17 @@ import os
 import re
 import yaml
 from pathlib import Path
-from langchain_community.llms import Ollama
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings  # ИСПРАВЬ ИМПОРТ!
 from langchain_experimental.text_splitter import SemanticChunker
+from typing import List
 
 # Инициализация эмбеддингов для чанкинга
 ollama_host = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
-chunker_embeddings = OllamaEmbeddings(model="ognivo777/rubert-mini-frida:latest", base_url=ollama_host)
-
+chunker_embeddings = OllamaEmbeddings(
+    model="ognivo777/rubert-mini-frida:latest",  # ИСПРАВЬ: model вместо model_name
+    base_url=ollama_host
+)
+# Остальной код без изменений...
 def semantic_chunk_text(text: str, chunk_size: int = 512) -> List[str]:
     """
     Семантически разбивает текст на чанки с помощью SemanticChunker
@@ -22,31 +25,6 @@ def semantic_chunk_text(text: str, chunk_size: int = 512) -> List[str]:
     
     # Разбиваем текст на чанки
     chunks = chunker.split_text(text)
-    
-    return chunks
-
-def simple_chunk_text(text: str, chunk_size: int = 512) -> List[str]:
-    """
-    Простое разбиение текста на чанки по количеству слов
-    """
-    words = text.split()
-    chunks = []
-    current_chunk = []
-    current_length = 0
-    
-    for word in words:
-        current_chunk.append(word)
-        current_length += len(word)
-        
-        if current_length > chunk_size:
-            chunk_text = " ".join(current_chunk)
-            chunks.append(chunk_text)
-            current_chunk = []
-            current_length = 0
-    
-    if current_chunk:
-        chunk_text = " ".join(current_chunk)
-        chunks.append(chunk_text)
     
     return chunks
 
@@ -106,8 +84,8 @@ def process_markdown_files(input_dir: Path, output_dir: Path, chunk_size: int = 
             print(f"  Сохранен чанк: {chunk_filename}")
 
 def main():
-    input_dir = Path("/app/output")  # Директория с исходными markdown файлами
-    output_dir = Path("/app/semantic_chunks")  # Директория для семантических чанков
+    input_dir = Path("/app/data/output")     # было /app/output
+    output_dir = Path("/app/data/semantic_chunks")  # было /app/semantic_chunks
     chunk_size = 512  # Приблизительный размер чанка в токенах
     
     print("🚀 Запуск семантического чанкинга")

@@ -1,6 +1,6 @@
 FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
-# 1. Системные пакеты
+# Системные пакеты
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl git \
     tesseract-ocr tesseract-ocr-rus tesseract-ocr-eng \
@@ -9,19 +9,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# 2. Копируем pyproject.toml и uv.lock
+# Копируем pyproject.toml и uv.lock
 COPY pyproject.toml uv.lock ./
 
-# 3. Устанавливаем uv и зависимости в одном RUN
+# Устанавливаем uv и зависимости (с кэшем)
 RUN pip install uv && \
-    uv sync --no-cache \
-    --index-url https://download.pytorch.org/whl/cu124 \
-    --extra-index-url https://pypi.org/simple
+    UV_HTTP_TIMEOUT=60 uv sync
 
-# 4. Копируем весь код
+# Копируем весь код
 COPY . .
 
-# 5. Проверка GPU
+# Проверка GPU
 RUN python -c "import torch; print('GPU:', torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'No GPU')"
 
-CMD ["uv", "run", "scripts/ai_chunking.py"]
+CMD ["uv", "run", "scripts/run_full_pipeline.py"]

@@ -1,4 +1,4 @@
-# main.py — PDF → Markdown с OCR и семантическим чанкингом через deepseek-r1
+# main.py — PDF → Markdown с OCR и семантическим чанкингом 
 import os
 import re
 import json
@@ -7,8 +7,8 @@ from pathlib import Path
 from datetime import datetime
 
 # Пути
-INPUT_DIR = Path("/app/documents")
-OUTPUT_DIR = Path("/app/output")
+INPUT_DIR = Path("/app/data/documents")  # было /app/documents
+OUTPUT_DIR = Path("/app/data/output")    # было /app/output
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # Типы документов и ключевые слова
@@ -32,6 +32,20 @@ TAGS_KEYWORDS = {
     "юридический": ["юридический", "адрес", "ОГРН", "ИНН", "КПП"]
 }
 
+def clean_author_name(author: str) -> str:
+    """Очищает имя автора от специальных символов"""
+    if not author or author == "Не указано":
+        return "Не указано"
+    
+    # Удаляем не-печатные символы
+    cleaned = re.sub(r'[^\x20-\x7E\u0400-\u04FF]', '', author)
+    
+    # Если после очистки строка пустая или слишком короткая
+    if not cleaned.strip() or len(cleaned.strip()) < 2:
+        return "Не указано"
+    
+    return cleaned.strip()
+
 def classify_document(text_sample: str) -> str:
     """Быстрая классификация документа"""
     text_lower = text_sample.lower()
@@ -48,18 +62,6 @@ def generate_tags(text_sample: str) -> list:
         if any(kw in text_lower for kw in keywords):
             tags.append(tag)
     return sorted(set(tags)) if tags else ["без тегов"]
-
-def generate_summary(text: str, max_sentences=3) -> str:
-    """Быстрое извлечение аннотации"""
-    # Remove markdown headers before generating summary
-    clean_text = re.sub(r'## Страница \d+', '', text)
-    clean_text = re.sub(r'!\[.*?\]\(.*?\)', '', clean_text)
-    clean_text = re.sub(r'\[[^\]]*\]\(.*?\)', '', clean_text)
-    clean_text = re.sub(r'\n{3,}', '\n\n', clean_text.strip())
-    
-    sentences = re.split(r'[.!?]+', clean_text)
-    summary = ". ".join([s.strip() for s in sentences if len(s.strip()) > 10][:max_sentences])
-    return (summary + ".").strip() if summary else "Аннотация недоступна."
 
 def get_pdf_metadata(pdf_path: Path):
     """Быстрое получение метаданных PDF"""
@@ -190,13 +192,13 @@ def convert_pdf_to_markdown(pdf_path: Path):
     
     # Получаем метаданные
     author, title, created, pages = get_pdf_metadata(pdf_path)
-    
-    # Генерируем метаданные
+    # ОЧИЩАЕМ автора из-за 6 документа
+    author = clean_author_name(author)
+    # Генерируем метаданные (БЕЗ SUMMARY)
     doc_type = classify_document(text_sample)
     tags = generate_tags(text_sample)
-    summary = generate_summary(text_sample)
     
-    # YAML-метаданные
+    # YAML-метаданные (убрали summary)
     yaml_header = f"""---
 filename: {pdf_path.name}
 title: {title}
@@ -205,12 +207,10 @@ creation_date: {created}
 pages: {pages}
 document_type: {doc_type}
 tags: {json.dumps(tags, ensure_ascii=False)}
-summary: {summary}
 processed_at: {datetime.now().isoformat().split('.')[0]}
 ---
 
 """
-
     # Сохраняем результат
     output_path = OUTPUT_DIR / f"{pdf_path.stem}.md"
     try:

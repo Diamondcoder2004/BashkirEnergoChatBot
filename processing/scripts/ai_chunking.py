@@ -1,27 +1,27 @@
 # ai_chunking.py — создание векторной базы в Qdrant из semantic chunks с помощью deepseek-r1 и nomic эмбеддингов
-from langchain_ollama import OllamaLLM
-from langchain_huggingface import HuggingFaceEmbeddings
+# from langchain_ollama import OllamaLLM
+from langchain_ollama import OllamaEmbeddings  # ПРАВИЛЬНЫЙ импорт
 from langchain_community.vectorstores import Qdrant
 from langchain_core.documents import Document
 import pathlib, re, yaml
-
-# DeepSeek-R1-8b (на хосте)
-llm = OllamaLLM(model="deepseek-r1:8b",
-                base_url="http://host.docker.internal:11434",
-                temperature=0.1)
+import os
+# # DeepSeek-R1-8b (на хосте)
+# llm = OllamaLLM(model="deepseek-r1:8b",
+#                 base_url="http://host.docker.internal:11434",
+#                 temperature=0.1)
 
 # Nomic эмбеддинги (работают с русским языком и другими)
-embeddings = HuggingFaceEmbeddings(
-    model_name="nomic-ai/nomic-embed-text-v1.5",
-    model_kwargs={"device": "cuda"},
-    encode_kwargs={"normalize_embeddings": True}
+ollama_host = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
+embeddings = OllamaEmbeddings(
+    model="nomic-embed-text:latest", base_url=ollama_host
+
 )
 
-print("DeepSeek-R1-8b + nomic-embed-text-v1.5 — всё подключено!")
+print("nomic-embed-text:latest подключено")
 
 def load_and_chunk():
     # Используем semantic chunks вместо простого разбиения
-    path = pathlib.Path("/app/semantic_chunks")
+    path = pathlib.Path("/app/data/semantic_chunks")  # было /app/semantic_chunks
     docs = []
     
     # Если semantic_chunks не существует, используем оригинальные markdown файлы

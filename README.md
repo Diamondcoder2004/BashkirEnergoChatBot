@@ -40,6 +40,12 @@ docker-compose up --build
 ```
 
 ### Альтернативный запуск
+```bash
+docker run -it --rm --gpus all `
+  -v ${PWD}/documents:/app/documents `
+  -v ${PWD}/output:/app/output `
+  -v ${PWD}/scripts:/app/scripts `
+  my-pipeline bash
 
 ```bash
 # Сборка образа
@@ -48,7 +54,8 @@ docker build -t bashkir-rag .
 # Запуск обработки документов
 docker run --gpus all -v ./documents:/app/documents -v ./output:/app/output -v ./.env:/app/.env -e HUGGINGFACE_HUB_TOKEN --network="host" bashkir-rag
 ```
-
+#запуск скрипта в контейнере 
+uv run python scripts/ai_chunking.py
 ## Структура проекта
 
 - `scripts/parse_docs_ocr.py`: конвертация PDF в Markdown с OCR
