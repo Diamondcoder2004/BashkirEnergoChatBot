@@ -1,36 +1,50 @@
-version: '3.8'
-
 services:
-  # Обработка документов
   document-processor:
-    build: ./processing
+    build:
+      context: .
+      dockerfile: Dockerfile.processor
+    image: bashkir-rag-processor:latest
+    container_name: bashkir-rag-processor
     volumes:
       - ./data:/app/data
+      - ./processing:/app/processing
+      - ./.env:/app/.env
+      - huggingface_cache:/root/.cache/huggingface
+    working_dir: /app/processing
     environment:
+      - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
       - OLLAMA_HOST=host.docker.internal
+      - HF_HOME=/root/.cache/huggingface
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    runtime: nvidia
+    stdin_open: true
+    tty: true
+    command: ["bash"]
 
-  # RAG API
   rag-api:
-    build: ./rag-service
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: bashkir-rag-api:latest
     ports:
       - "8000:8000"
+    volumes:
+      - ./rag-service:/app
+      - huggingface_cache:/root/.cache/huggingface
     environment:
+      - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
       - OLLAMA_HOST=host.docker.internal
+      - QDRANT_HOST=host.docker.internal
+      - HF_HOME=/root/.cache/huggingface
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    runtime: nvidia
     depends_on:
       - qdrant
+    restart: unless-stopped
 
-  # Qdrant
+
   qdrant:
     image: qdrant/qdrant:latest
     ports:
@@ -41,3 +55,4 @@ services:
 
 volumes:
   qdrant_data:
+  huggingface_cache:

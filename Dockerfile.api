@@ -1,0 +1,16 @@
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+
+WORKDIR /app
+
+# Копируем зависимости сначала (для кэширования)
+COPY rag-service/pyproject.toml rag-service/uv.lock ./
+
+# Устанавливаем uv и зависимости ГЛОБАЛЬНО
+RUN pip install uv && \
+    uv pip install --system -e .
+
+# Копируем код приложения (отдельно для кэширования)
+COPY rag-service/app/ ./app/
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

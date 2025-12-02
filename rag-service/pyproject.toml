@@ -1,0 +1,30 @@
+[project]
+name = "rag-api"
+version = "0.1.0"
+description = "RAG API для Башкирэнерго"
+requires-python = ">=3.11"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "langchain==0.3.20",           
+    "langchain-ollama==0.2.2",    
+    "langchain-huggingface==0.1.0", 
+    "langchain-community==0.3.19", 
+    "langchain-core==0.3.41",      
+    "qdrant-client==1.12.0",      
+    "sentence-transformers==3.1.1", 
+    "torch==2.5.1",
+    "pydantic",
+    "python-dotenv",
+    "requests",
+    "transformers",  # Добавлено для работы с моделями
+    "accelerate",    # Добавлено для оптимизации
+    "numpy"          # Добавлено для численных операций
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest",
+    "black"
+]

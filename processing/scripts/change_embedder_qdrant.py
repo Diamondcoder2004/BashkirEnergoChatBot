@@ -1,4 +1,4 @@
-# scripts/reindex_qdrant.py
+# scripts/change_embedder_qdrant.py
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Qdrant
 from langchain_core.documents import Document

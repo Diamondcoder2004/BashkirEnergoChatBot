@@ -1,4 +1,3 @@
-```
 # Compiled and build artifacts
 *.pyc
 __pycache__/
@@ -44,4 +43,26 @@ htmlcov/
 # System files
 .DS_Store
 Thumbs.db
-```
+
+# Data directories (НЕ пушить!)
+data/
+benchmark_results/
+models/
+cache/
+.cache/
+*.pdf
+*.docx
+*.csv
+!benchmark.csv
+!fag_question.csv
+
+# Large files
+*.zip
+*.tar.gz
+*.7z
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Docker
+docker-compose.override.yml

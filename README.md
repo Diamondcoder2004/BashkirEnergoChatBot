@@ -49,15 +49,38 @@ docker run -it --rm --gpus all \
   -v ${PWD}/scripts:/app/scripts \
   my-pipeline bash
 
-# Сборка образа
+# Сборка образа из Dockerfile
 docker build -t bashkir-rag .
 
-# Запуск обработки документов
-docker run --gpus all -v ./documents:/app/documents -v ./output:/app/output -v ./.env:/app/.env -e HUGGINGFACE_HUB_TOKEN --network="host" bashkir-rag
+# Актуальный способ сборки и запуска через docker-compose 
+docker-compose up -d document-processor
 
-# Запуск скрипта в контейнере 
-uv run python scripts/ai_chunking.py
+# Подключаемся к контейнеру
+docker exec -it bashkir-rag-processor bash
+
+# Запуск скрипта в контейнере
+
+uv run python scripts/parse_docs_ocr.py
+uv run python scripts/semantic_chunking.py  
+uv run python scripts/chunk_embedding_qdrant.py
+uv run python scripts/run_full_pipeline.py  #  интерактивное меню
 ```
+# посчитать количество файлов
+find /app/data/documents -type f | wc -l
+
+
+# Для rag-api
+Для изменений в коде (.py файлы):
+bash
+# Просто пересобери (кэш зависимостей сохранится)
+docker-compose up -d --build rag-api
+
+# Для изменений в .env:
+
+bash
+# Перезапусти без сборки (env подхватится автоматически)
+docker-compose down
+docker-compose up -d rag-api
 
 ## Структура проекта
 
